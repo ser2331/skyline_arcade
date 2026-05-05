@@ -11,7 +11,7 @@ export function MenuScreen({ onStart, soundEnabled, onToggleSound }: Props) {
   return (
     <main className="screen menu-screen">
       <div className="menu-card">
-        <h1>Game Menu</h1>
+        <h1>Skyline Arcade</h1>
         <p>Choose a game to play.</p>
         <div className="game-grid">
           {gameOrder.map((gameId) => (

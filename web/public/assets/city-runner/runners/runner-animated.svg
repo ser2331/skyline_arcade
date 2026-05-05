@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="hoodie" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f6d3a8" />
+      <stop offset="100%" stop-color="#e9b98a" />
+    </linearGradient>
+    <linearGradient id="pants" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1f2937" />
+    </linearGradient>
+  </defs>
+
+  <g>
+    <!-- breathing -->
+    <animateTransform attributeName="transform" type="translate" values="0 0;0 -0.8;0 0" dur="1.6s" repeatCount="indefinite"/>
+
+    <!-- torso -->
+    <rect x="43" y="36" width="34" height="36" rx="11" fill="url(#hoodie)" />
+    <rect x="50" y="43" width="20" height="7" rx="3.5" fill="#93c5fd" opacity="0.85" />
+    <circle cx="51" cy="57" r="1.8" fill="#dbeafe"/>
+    <circle cx="69" cy="57" r="1.8" fill="#dbeafe"/>
+    <line x1="51" y1="59" x2="47" y2="67" stroke="#dbeafe" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="69" y1="59" x2="73" y2="67" stroke="#dbeafe" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- head -->
+    <ellipse cx="60" cy="23" rx="15" ry="14" fill="url(#skin)" />
+    <path d="M46 22c2-11 26-13 30 0-2-4-7-8-15-8s-13 4-15 8z" fill="#334155"/>
+    <circle cx="66.5" cy="22.5" r="2" fill="#111827"/>
+    <ellipse cx="66.5" cy="22.5" rx="2.1" ry="1.2" fill="#111827">
+      <animate attributeName="ry" values="1.2;1.2;0.15;1.2;1.2" dur="3.4s" repeatCount="indefinite"/>
+    </ellipse>
+    <path d="M68 27c-2 1-5 1-7 0" stroke="#7c2d12" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+
+    <!-- left arm -->
+    <g>
+      <animateTransform attributeName="transform" type="rotate" values="-20 43 45;-2 43 45;-20 43 45" dur="0.62s" repeatCount="indefinite"/>
+      <rect x="38" y="45" width="10" height="24" rx="5" fill="url(#skin)"/>
+    </g>
+
+    <!-- right arm -->
+    <g>
+      <animateTransform attributeName="transform" type="rotate" values="22 77 45;4 77 45;22 77 45" dur="0.62s" repeatCount="indefinite"/>
+      <rect x="72" y="45" width="10" height="24" rx="5" fill="url(#skin)"/>
+    </g>
+
+    <!-- left leg -->
+    <g>
+      <animateTransform attributeName="transform" type="rotate" values="16 51 71;-10 51 71;16 51 71" dur="0.62s" repeatCount="indefinite"/>
+      <rect x="45.5" y="71" width="11" height="39" rx="6" fill="url(#pants)"/>
+      <rect x="44" y="106" width="15" height="7" rx="3.5" fill="#020617"/>
+    </g>
+
+    <!-- right leg -->
+    <g>
+      <animateTransform attributeName="transform" type="rotate" values="-12 68 71;14 68 71;-12 68 71" dur="0.62s" repeatCount="indefinite"/>
+      <rect x="62.5" y="71" width="11" height="39" rx="6" fill="url(#pants)"/>
+      <rect x="61" y="106" width="15" height="7" rx="3.5" fill="#020617"/>
+    </g>
+  </g>
+</svg>

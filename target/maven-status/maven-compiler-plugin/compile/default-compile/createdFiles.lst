@@ -1,0 +1,5 @@
+com\game\dodgecubes\score\ScoreSubmission.class
+com\game\dodgecubes\DodgeCubesApplication.class
+com\game\dodgecubes\score\ScoreService.class
+com\game\dodgecubes\score\ScoreEntry.class
+com\game\dodgecubes\score\ScoreController.class

@@ -143,6 +143,13 @@ const loadImage = (url: string): Promise<HTMLImageElement> =>
     image.src = url;
   });
 
+const resolveAssetUrl = (value: string): string => {
+  const base = import.meta.env.BASE_URL || "/";
+  if (/^(https?:)?\/\//.test(value)) return value;
+  if (value.startsWith("/")) return `${base}${value.slice(1)}`;
+  return `${base}${value}`;
+};
+
 const buildStripFromImages = (images: HTMLImageElement[]): SpriteStrip | undefined => {
   if (images.length === 0) return undefined;
   const frameWidth = images[0].naturalWidth || images[0].width;
@@ -162,8 +169,8 @@ export async function preloadCityRunnerExternalAssets(
 ): Promise<void> {
   const envRunner = import.meta.env.VITE_CITY_RUNNER_RUNNER_SVG as string | undefined;
   const runnerFile = envRunner && envRunner.trim().length > 0
-    ? envRunner.trim()
-    : "/assets/city-runner/runners/default.svg";
+    ? resolveAssetUrl(envRunner.trim())
+    : resolveAssetUrl("/assets/city-runner/runners/default.svg");
   const runnerPattern = (import.meta.env.VITE_CITY_RUNNER_RUNNER_SVG_PATTERN as string | undefined)?.trim();
   const runnerFramesRaw = Number(import.meta.env.VITE_CITY_RUNNER_RUNNER_SVG_FRAMES ?? 0);
   const runnerFrames = Number.isFinite(runnerFramesRaw) ? Math.max(0, Math.floor(runnerFramesRaw)) : 0;
@@ -178,8 +185,8 @@ export async function preloadCityRunnerExternalAssets(
 
   const [runner, bee, fly] = await Promise.allSettled([
     loadImage(runnerFile),
-    loadImage("/assets/city-runner/bee.svg"),
-    loadImage("/assets/city-runner/fly.svg")
+    loadImage(resolveAssetUrl("/assets/city-runner/bee.svg")),
+    loadImage(resolveAssetUrl("/assets/city-runner/fly.svg"))
   ]);
 
   visuals.external.runner = runner.status === "fulfilled" ? runner.value : undefined;
@@ -188,7 +195,7 @@ export async function preloadCityRunnerExternalAssets(
 
   if (runnerPattern && runnerFrames > 1) {
     const frameLoads = await Promise.allSettled(
-      Array.from({ length: runnerFrames }, (_, i) => loadImage(runnerPattern.replace("{n}", String(i + 1))))
+      Array.from({ length: runnerFrames }, (_, i) => loadImage(resolveAssetUrl(runnerPattern.replace("{n}", String(i + 1)))))
     );
     const loadedFrames = frameLoads
       .filter((r): r is PromiseFulfilledResult<HTMLImageElement> => r.status === "fulfilled")
@@ -199,7 +206,7 @@ export async function preloadCityRunnerExternalAssets(
   const loadPatternStrip = async (pattern: string | undefined, frames: number): Promise<SpriteStrip | undefined> => {
     if (!pattern || frames <= 0) return undefined;
     const frameLoads = await Promise.allSettled(
-      Array.from({ length: frames }, (_, i) => loadImage(pattern.replace("{n}", String(i + 1))))
+      Array.from({ length: frames }, (_, i) => loadImage(resolveAssetUrl(pattern.replace("{n}", String(i + 1)))))
     );
     const loadedFrames = frameLoads
       .filter((r): r is PromiseFulfilledResult<HTMLImageElement> => r.status === "fulfilled")

@@ -10,10 +10,10 @@ type Props = {
 };
 
 const gameIcons: Record<GameId, string> = {
-  "dodge-cubes": "/assets/menu-icons/dodge-cubes.svg",
-  "city-runner": "/assets/menu-icons/city-runner.svg",
-  "car-ride": "/assets/menu-icons/car-ride.svg",
-  worms: "/assets/menu-icons/worms.svg"
+  "dodge-cubes": `${import.meta.env.BASE_URL}assets/menu-icons/dodge-cubes.svg`,
+  "city-runner": `${import.meta.env.BASE_URL}assets/menu-icons/city-runner.svg`,
+  "car-ride": `${import.meta.env.BASE_URL}assets/menu-icons/car-ride.svg`,
+  worms: `${import.meta.env.BASE_URL}assets/menu-icons/worms.svg`
 };
 
 export function MenuScreen({ onStart, onOpenCampaign, soundEnabled, onToggleSound }: Props) {

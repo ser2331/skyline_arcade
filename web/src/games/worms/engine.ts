@@ -84,17 +84,17 @@ export function createWormsEngine(canvas: HTMLCanvasElement, callbacks: EngineCa
 
     ctx.fillStyle = dayPhase ? "#0f172a" : "#e2e8f0";
     ctx.font = "bold 16px Arial";
-    ctx.fillText(`Length: ${playerLength}`, 10, 20);
+    ctx.fillText(`Длина: ${playerLength}`, 10, 20);
     const percent = Math.floor((playerLength / maxBodyCells) * 100);
-    ctx.fillText(`Goal: fill map (${percent}%)`, 10, 40);
-    ctx.fillText(dayPhase ? "Day" : "Night", 10, 60);
+    ctx.fillText(`Цель: заполнить карту (${percent}%)`, 10, 40);
+    ctx.fillText(dayPhase ? "День" : "Ночь", 10, 60);
 
     if (gameOver) {
       ctx.fillStyle = "rgba(2, 6, 23, 0.65)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#f8fafc";
       ctx.font = "bold 30px Arial";
-      ctx.fillText(win ? "Greatest worm!" : "Worm defeated", 145, 240);
+      ctx.fillText(win ? "Победа! Великий червь!" : "Поражение", 90, 240);
     }
   };
 

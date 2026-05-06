@@ -23,6 +23,26 @@ const drawSprite = (
   ctx.drawImage(strip.image, sx, 0, strip.frameWidth, strip.frameHeight, x, y, width, height);
 };
 
+const computeFitBox = (opts: {
+  srcW: number;
+  srcH: number;
+  desiredW: number;
+  desiredH: number;
+  anchorBottomY: number;
+  anchorCenterX: number;
+}) => {
+  const aspect = opts.srcW > 0 ? opts.srcH / opts.srcW : 1;
+  // Prefer fitting by height so feet stay grounded and we avoid distortion.
+  const h = opts.desiredH;
+  const w = h / aspect;
+  return {
+    x: opts.anchorCenterX - w / 2,
+    y: opts.anchorBottomY - h,
+    w,
+    h
+  };
+};
+
 const drawShadow = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -161,7 +181,8 @@ export function drawRunner(
   drawShadow(ctx, player.x - 2, groundY, player.width + 8, airborne ? 0.12 : 0.2);
 
   if (extPoseStrip) {
-    const extFrame = frameIndex % extPoseStrip.frames;
+    const extTicks = pose === "run" ? 3 : pose === "crouch" ? 6 : 7;
+    const extFrame = Math.floor(frame / extTicks) % extPoseStrip.frames;
     const rotation =
       pose === "run"
         ? Math.sin(frame * 0.22) * 0.05
@@ -171,30 +192,58 @@ export function drawRunner(
             ? -0.14
             : 0;
     const crouchForward = pose === "crouch" ? 3.2 : 0;
+    const runLift = Math.sin(frame * 0.45) * (pose === "run" ? 1.6 : 0.6);
+    const runNudge = Math.sin(frame * 0.45) * (pose === "run" ? 1.2 : 0.35);
+    const fit = computeFitBox({
+      srcW: extPoseStrip.frameWidth,
+      srcH: extPoseStrip.frameHeight,
+      desiredW: drawW + 2,
+      desiredH: drawH + 6,
+      anchorBottomY: player.y + player.height + 2 - runLift,
+      anchorCenterX: player.x + player.width / 2 + runNudge
+    });
     ctx.save();
-    ctx.translate(drawX + drawW * 0.5, drawY + drawH * 0.58);
+    ctx.translate(fit.x + fit.w * 0.5, fit.y + fit.h * 0.58);
     ctx.rotate(rotation);
-    ctx.translate(-(drawX + drawW * 0.5), -(drawY + drawH * 0.58));
-    drawSprite(ctx, extPoseStrip, extFrame, drawX - 1 + crouchForward, drawY - 1, drawW + 2, drawH + 2);
+    ctx.translate(-(fit.x + fit.w * 0.5), -(fit.y + fit.h * 0.58));
+    drawSprite(ctx, extPoseStrip, extFrame, fit.x + crouchForward, fit.y, fit.w, fit.h);
     ctx.restore();
   } else if (visuals.external.runnerStrip) {
-    const extFrame = frameIndex % visuals.external.runnerStrip.frames;
+    const extFrame = Math.floor(frame / 4) % visuals.external.runnerStrip.frames;
     const rotation = Math.sin(frame * 0.2) * 0.045;
+    const fit = computeFitBox({
+      srcW: visuals.external.runnerStrip.frameWidth,
+      srcH: visuals.external.runnerStrip.frameHeight,
+      desiredW: drawW + 2,
+      desiredH: drawH + 6,
+      anchorBottomY: player.y + player.height + 2,
+      anchorCenterX: player.x + player.width / 2
+    });
     ctx.save();
-    ctx.translate(drawX + drawW * 0.52, drawY + drawH * 0.58);
+    ctx.translate(fit.x + fit.w * 0.52, fit.y + fit.h * 0.58);
     ctx.rotate(rotation);
-    ctx.translate(-(drawX + drawW * 0.52), -(drawY + drawH * 0.58));
-    drawSprite(ctx, visuals.external.runnerStrip, extFrame, drawX - 1, drawY - 1, drawW + 2, drawH + 2);
+    ctx.translate(-(fit.x + fit.w * 0.52), -(fit.y + fit.h * 0.58));
+    drawSprite(ctx, visuals.external.runnerStrip, extFrame, fit.x, fit.y, fit.w, fit.h);
     ctx.restore();
   } else if (visuals.external.runner) {
     const runLift = Math.sin(frame * 0.45) * (pose === "run" ? 1.5 : 0.6);
     const runNudge = Math.sin(frame * 0.45) * (pose === "run" ? 1.2 : 0.35);
     const rotation = pose === "crouch" ? -0.12 : pose === "jump" ? -0.08 : Math.sin(frame * 0.24) * 0.05;
+    const srcW = visuals.external.runner.naturalWidth || 120;
+    const srcH = visuals.external.runner.naturalHeight || 120;
+    const fit = computeFitBox({
+      srcW,
+      srcH,
+      desiredW: drawW + 2,
+      desiredH: drawH + 6,
+      anchorBottomY: player.y + player.height + 2 - runLift,
+      anchorCenterX: player.x + player.width / 2 + runNudge
+    });
     ctx.save();
-    ctx.translate(drawX + drawW * 0.52, drawY + drawH * 0.58);
+    ctx.translate(fit.x + fit.w * 0.52, fit.y + fit.h * 0.58);
     ctx.rotate(rotation);
-    ctx.translate(-(drawX + drawW * 0.52), -(drawY + drawH * 0.58));
-    ctx.drawImage(visuals.external.runner, drawX - 1 + runNudge, drawY - 1 - runLift, drawW + 2, drawH + 2);
+    ctx.translate(-(fit.x + fit.w * 0.52), -(fit.y + fit.h * 0.58));
+    ctx.drawImage(visuals.external.runner, fit.x, fit.y, fit.w, fit.h);
     ctx.restore();
   } else {
     drawSprite(ctx, strip, frameIndex, drawX, drawY, drawW, drawH);

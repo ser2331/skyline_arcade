@@ -14,6 +14,8 @@ import {
 import type { BrickObstacle, Creature, Debris, FlyingObstacle, FxParticle, GroundObstacle, ImpactRing, StarDrop } from "./types";
 import type { EngineCallbacks } from "../types";
 import { createCityRunnerVisuals, drawParallaxBackground, preloadCityRunnerExternalAssets, SpriteAnimator } from "./visuals";
+import { getCityRunnerActiveLevel } from "./levelStore";
+import type { CityRunnerLevelEvent } from "./levelStore";
 
 export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: EngineCallbacks): GameEngine {
   const ctx = canvas.getContext("2d");
@@ -62,6 +64,20 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
   let nextBrickSpawnIn = 150;
   let nextCreatureSpawnIn = 210;
   let nextFlyingSpawnIn = 185;
+  const scripted = getCityRunnerActiveLevel();
+  const scriptedDurationFrames = scripted ? Math.max(60, Math.floor(scripted.durationSec * 60)) : 0;
+  const scriptedCheckpoints = scripted
+    ? [...scripted.checkpointsSec]
+        .filter((s) => Number.isFinite(s) && s > 0)
+        .map((s) => Math.floor(s * 60))
+        .sort((a, b) => a - b)
+    : [];
+  const scriptedEvents: CityRunnerLevelEvent[] = scripted
+    ? [...scripted.events].filter((e) => typeof e?.at === "number" && Number.isFinite(e.at)).sort((a, b) => a.at - b.at)
+    : [];
+  let scriptedCursor = 0;
+  let checkpointCursor = 0;
+  let levelWon = false;
   let scoreRemainder = 0;
   let visualsReady = false;
   let visualsLoading = false;
@@ -106,6 +122,23 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
     });
   };
 
+  const spawnGroundObstacleScripted = (evt: Extract<CityRunnerLevelEvent, { type: "ground" }>) => {
+    const kind = evt.kind;
+    const height = evt.height ?? (34 + Math.random() * 82);
+    const width =
+      evt.width ??
+      (kind === "flower"
+        ? 18 + Math.random() * 10
+        : 28 + Math.random() * 30);
+    groundObstacles.push({
+      x: canvas.width + width,
+      width,
+      height,
+      speed: 3.45 + Math.min(score / 340, 2.35),
+      kind
+    });
+  };
+
   const spawnBrick = () => {
     const width = 44 + Math.random() * 44;
     bricks.push({
@@ -113,6 +146,19 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
       width,
       y: groundY - 62 - Math.random() * 22,
       height: 18 + Math.random() * 14,
+      speed: 3.5 + Math.min(score / 340, 2.4)
+    });
+  };
+
+  const spawnBrickScripted = (evt: Extract<CityRunnerLevelEvent, { type: "brick" }>) => {
+    const width = evt.width ?? (44 + Math.random() * 44);
+    const height = evt.height ?? (18 + Math.random() * 14);
+    const y = evt.y ?? (groundY - 62 - Math.random() * 22);
+    bricks.push({
+      x: canvas.width + width,
+      width,
+      y,
+      height,
       speed: 3.5 + Math.min(score / 340, 2.4)
     });
   };
@@ -127,6 +173,8 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
       phase: Math.random() * Math.PI * 2
     });
   };
+
+  const spawnCreatureScripted = () => spawnCreature();
 
   const spawnFlyer = () => {
     const lowFlight = Math.random() < 0.42;
@@ -143,8 +191,28 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
     });
   };
 
+  const spawnFlyerScripted = (evt: Extract<CityRunnerLevelEvent, { type: "flyer" }>) => {
+    const lowFlight = evt.lowFlight ?? (Math.random() < 0.42);
+    flyers.push({
+      x: canvas.width + 36,
+      y: lowFlight ? groundY - player.normalHeight + 2 + Math.random() * 8 : 108 + Math.random() * 148,
+      width: 30 + Math.random() * 10,
+      height: 16 + Math.random() * 8,
+      speed: 3.8 + Math.min(score / 320, 2.5),
+      flap: Math.random() * Math.PI * 2,
+      lowFlight,
+      starCarrier: evt.starCarrier ?? (Math.random() < 0.3),
+      kind: evt.kind ?? (Math.random() < 0.5 ? "bee" : "fly")
+    });
+  };
+
   const spawnStar = (x: number, y: number, kind: "invincible" | "superJump", speedX: number) => {
     stars.push({ x, y, size: 18, speedX, speedY: -3.8, kind });
+  };
+
+  const spawnStarScripted = (evt: Extract<CityRunnerLevelEvent, { type: "star" }>) => {
+    const y = evt.y ?? (groundY - 140);
+    spawnStar(canvas.width + 40, y, evt.kind, 0.3);
   };
 
   const spawnBrickDebris = (brick: BrickObstacle) => {
@@ -291,7 +359,7 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#f8fafc";
       ctx.font = "bold 22px Arial";
-      ctx.fillText("Loading assets...", 160, 236);
+      ctx.fillText("Загрузка ассетов...", 145, 236);
       ctx.fillStyle = "#334155";
       ctx.fillRect(120, 260, 260, 10);
       ctx.fillStyle = "#60a5fa";
@@ -342,19 +410,36 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
     if (invincibleFrames > 0) {
       ctx.fillStyle = "#fde047";
       ctx.font = "bold 16px Arial";
-      ctx.fillText(`Invincible: ${Math.ceil(invincibleFrames / 60)}s`, 12, 28);
+      ctx.fillText(`Неуязвимость: ${Math.ceil(invincibleFrames / 60)}с`, 12, 28);
     }
     if (superJumpFrames > 0) {
       ctx.fillStyle = "#60a5fa";
       ctx.font = "bold 16px Arial";
-      ctx.fillText(`Super jump: ${Math.ceil(superJumpFrames / 60)}s`, 12, 50);
+      ctx.fillText(`Супер-прыжок: ${Math.ceil(superJumpFrames / 60)}с`, 12, 50);
+    }
+    if (scripted) {
+      const elapsed = Math.floor(frame / 60);
+      const total = Math.max(1, Math.floor(scriptedDurationFrames / 60));
+      const remaining = Math.max(0, total - elapsed);
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "bold 16px Arial";
+      ctx.fillText(`Время: ${elapsed}/${total}с`, 12, 72);
+      ctx.fillText(`До финиша: ${remaining}с`, 12, 94);
+      ctx.fillText(`Чекпоинты: ${checkpointCursor}/${scriptedCheckpoints.length}`, 12, 116);
     }
     if (gameOver) {
       ctx.fillStyle = "rgba(2, 6, 23, 0.58)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#f8fafc";
       ctx.font = "bold 30px Arial";
-      ctx.fillText("Crashed!", 182, 226);
+      ctx.fillText("Поражение!", 162, 226);
+    }
+    if (levelWon) {
+      ctx.fillStyle = "rgba(2, 6, 23, 0.58)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#86efac";
+      ctx.font = "bold 30px Arial";
+      ctx.fillText("Финиш! Победа!", 126, 226);
     }
     ctx.restore();
 
@@ -376,7 +461,7 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
   };
 
   const update = () => {
-    if (gameOver || !visualsReady) return;
+    if (gameOver || levelWon || !visualsReady) return;
     if (hitStopFrames > 0) {
       hitStopFrames -= 1;
       return;
@@ -387,54 +472,77 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
     const motionFactor = boostForward ? 1.35 : slowBackward ? 0.72 : 1;
     motionVisualStrength = boostForward ? 1 : slowBackward ? 0 : 0.25;
 
-    nextGroundSpawnIn -= motionFactor;
-    nextBrickSpawnIn -= motionFactor;
-    nextCreatureSpawnIn -= motionFactor;
-    nextFlyingSpawnIn -= motionFactor;
-
-    if (nextGroundSpawnIn <= 0) {
-      const crowded =
-        lastX(groundObstacles) > canvas.width - 170 ||
-        lastX(creatures) > canvas.width - 250 ||
-        lastX(bricks) > canvas.width - 150 ||
-        lastX(flyers) > canvas.width - 170;
-      if (!crowded) {
-        spawnGroundObstacle();
-        nextGroundSpawnIn = 150 + Math.floor(Math.random() * 50) - Math.min(12, Math.floor(score / 330));
+    if (scripted) {
+      while (scriptedCursor < scriptedEvents.length && scriptedEvents[scriptedCursor].at <= frame) {
+        const evt = scriptedEvents[scriptedCursor];
+        if (evt.type === "ground") spawnGroundObstacleScripted(evt);
+        if (evt.type === "brick") spawnBrickScripted(evt);
+        if (evt.type === "creature") spawnCreatureScripted();
+        if (evt.type === "flyer") spawnFlyerScripted(evt);
+        if (evt.type === "star") spawnStarScripted(evt);
+        scriptedCursor += 1;
       }
-    }
-
-    if (nextBrickSpawnIn <= 0) {
-      const crowded =
-        lastX(groundObstacles) > canvas.width - 150 ||
-        lastX(bricks) > canvas.width - 140 ||
-        lastX(creatures) > canvas.width - 250;
-      if (!crowded) {
-        spawnBrick();
-        nextBrickSpawnIn = 165 + Math.floor(Math.random() * 50) - Math.min(16, Math.floor(score / 260));
+      while (checkpointCursor < scriptedCheckpoints.length && frame >= scriptedCheckpoints[checkpointCursor]) {
+        callbacks.onEvent?.("collect");
+        checkpointCursor += 1;
       }
-    }
-
-    if (nextCreatureSpawnIn <= 0) {
-      const crowded =
-        lastX(groundObstacles) > canvas.width - 280 ||
-        lastX(creatures) > canvas.width - 260 ||
-        lastX(bricks) > canvas.width - 220 ||
-        lastX(flyers) > canvas.width - 240;
-      if (!crowded) {
-        spawnCreature();
-        nextCreatureSpawnIn = 260 + Math.floor(Math.random() * 110) - Math.min(12, Math.floor(score / 420));
+      if (frame >= scriptedDurationFrames) {
+        levelWon = true;
+        callbacks.onLevelComplete?.();
+        return;
       }
-    }
+    } else {
+      nextGroundSpawnIn -= motionFactor;
+      nextBrickSpawnIn -= motionFactor;
+      nextCreatureSpawnIn -= motionFactor;
+      nextFlyingSpawnIn -= motionFactor;
 
-    if (nextFlyingSpawnIn <= 0) {
-      const crowded =
-        lastX(flyers) > canvas.width - 170 ||
-        lastX(bricks) > canvas.width - 140 ||
-        lastX(creatures) > canvas.width - 240;
-      if (!crowded) {
-        spawnFlyer();
-        nextFlyingSpawnIn = 190 + Math.floor(Math.random() * 95) - Math.min(22, Math.floor(score / 320));
+      if (nextGroundSpawnIn <= 0) {
+        // Keep ground obstacles away from bricks to avoid "unreactable" combos.
+        const crowded =
+          lastX(groundObstacles) > canvas.width - 190 ||
+          lastX(creatures) > canvas.width - 250 ||
+          lastX(bricks) > canvas.width - 240 ||
+          lastX(flyers) > canvas.width - 170;
+        if (!crowded) {
+          spawnGroundObstacle();
+          nextGroundSpawnIn = 150 + Math.floor(Math.random() * 50) - Math.min(12, Math.floor(score / 330));
+        }
+      }
+
+      if (nextBrickSpawnIn <= 0) {
+        // Keep bricks away from ground obstacles (pipes/flowers).
+        const crowded =
+          lastX(groundObstacles) > canvas.width - 250 ||
+          lastX(bricks) > canvas.width - 140 ||
+          lastX(creatures) > canvas.width - 250;
+        if (!crowded) {
+          spawnBrick();
+          nextBrickSpawnIn = 165 + Math.floor(Math.random() * 50) - Math.min(16, Math.floor(score / 260));
+        }
+      }
+
+      if (nextCreatureSpawnIn <= 0) {
+        const crowded =
+          lastX(groundObstacles) > canvas.width - 280 ||
+          lastX(creatures) > canvas.width - 260 ||
+          lastX(bricks) > canvas.width - 220 ||
+          lastX(flyers) > canvas.width - 240;
+        if (!crowded) {
+          spawnCreature();
+          nextCreatureSpawnIn = 260 + Math.floor(Math.random() * 110) - Math.min(12, Math.floor(score / 420));
+        }
+      }
+
+      if (nextFlyingSpawnIn <= 0) {
+        const crowded =
+          lastX(flyers) > canvas.width - 170 ||
+          lastX(bricks) > canvas.width - 140 ||
+          lastX(creatures) > canvas.width - 240;
+        if (!crowded) {
+          spawnFlyer();
+          nextFlyingSpawnIn = 190 + Math.floor(Math.random() * 95) - Math.min(22, Math.floor(score / 320));
+        }
       }
     }
 
@@ -576,7 +684,8 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
         player.velocityY >= 0 &&
         (overlapNow || overlapBefore);
       const standingOnTopNow = Math.abs(currentBottom - top) < 4.2 && overlapNow;
-      if (landingFromTop || standingOnTopNow) {
+      // Flowers are always lethal on contact, even when landing on top.
+      if (o.kind !== "flower" && (landingFromTop || standingOnTopNow)) {
         player.y = top - player.height;
         player.velocityY = 0;
         continue;
@@ -753,7 +862,8 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
       scoreRemainder += motionFactor;
       const scoreGain = Math.floor(scoreRemainder);
       if (scoreGain > 0) {
-        score += scoreGain;
+        if (scripted) score = Math.floor(frame / 60);
+        else score += scoreGain;
         scoreRemainder -= scoreGain;
         callbacks.onScoreChange(score);
       }
@@ -805,6 +915,7 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
       scoreRemainder = 0;
       frame = 0;
       gameOver = false;
+      levelWon = false;
       player.velocityY = 0;
       player.height = player.normalHeight;
       player.y = groundY - player.normalHeight;
@@ -831,6 +942,8 @@ export function createCityRunnerEngine(canvas: HTMLCanvasElement, callbacks: Eng
       nextBrickSpawnIn = 150;
       nextCreatureSpawnIn = 210;
       nextFlyingSpawnIn = 185;
+      scriptedCursor = 0;
+      checkpointCursor = 0;
       callbacks.onScoreChange(0);
       render();
     },

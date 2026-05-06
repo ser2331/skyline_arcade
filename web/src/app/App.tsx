@@ -3,8 +3,15 @@ import type { FormEvent } from "react";
 import { gameFactories } from "../games/registry";
 import { MenuScreen } from "../features/menu/MenuScreen";
 import { GameScreen } from "../features/game/GameScreen";
+import { LevelBuilderScreen } from "../features/level-builder/LevelBuilderScreen";
+import { CampaignScreen } from "../features/campaign/CampaignScreen";
+import { LevelResultScreen } from "../features/campaign/LevelResultScreen";
 import { RunnerSound } from "../shared/audio/RunnerSound";
 import type { GameEngine, GameId, InputMode, LeaderboardEntry, Screen } from "../shared/types/game";
+import { setCityRunnerActiveLevel } from "../games/city-runner/levelStore";
+import { useTranslation } from "react-i18next";
+import { cityRunnerCampaignLevels, getUnlockedCityRunnerLevelCount, unlockNextCityRunnerLevel } from "../features/campaign/cityRunnerCampaign";
+import { LanguageSwitch } from "../shared/ui/LanguageSwitch";
 
 const isTouch = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
 const LOCAL_SCORES_KEY = "dodge-cubes-local-scores";
@@ -39,6 +46,7 @@ const writeLocalScores = (items: LeaderboardEntry[]) => {
 };
 
 export default function App() {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const soundRef = useRef<RunnerSound>(new RunnerSound());
@@ -51,7 +59,13 @@ export default function App() {
   const [name, setName] = useState<string>("");
   const [status, setStatus] = useState<string>("");
   const [gameOver, setGameOver] = useState<boolean>(false);
+  const [levelWon, setLevelWon] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [campaignLevelIndex, setCampaignLevelIndex] = useState<number | null>(null);
+  const [lastPlayedTitle, setLastPlayedTitle] = useState<string>("");
+  const [lastWon, setLastWon] = useState<boolean>(false);
+  const [elapsedSec, setElapsedSec] = useState<number>(0);
+  const startedAtRef = useRef<number>(0);
 
   useEffect(() => {
     if (!canvasRef.current || screen !== "game") return;
@@ -62,7 +76,22 @@ export default function App() {
       onEvent: (event) => soundRef.current.play(event),
       onGameOver: () => {
         setGameOver(true);
-        setStatus("Game over! Save your score.");
+        setLevelWon(false);
+        setStatus(t("game.defeatStatus"));
+        if (campaignLevelIndex !== null) {
+          setLastWon(false);
+          setScreen("level-result");
+        }
+      },
+      onLevelComplete: () => {
+        setGameOver(true);
+        setLevelWon(true);
+        setStatus(t("game.victoryStatus"));
+        if (campaignLevelIndex !== null) {
+          unlockNextCityRunnerLevel(campaignLevelIndex);
+          setLastWon(true);
+          setScreen("level-result");
+        }
       }
     });
 
@@ -103,6 +132,15 @@ export default function App() {
     return () => window.clearInterval(pulseId);
   }, [screen, activeGame, gameOver]);
 
+  useEffect(() => {
+    if (screen !== "game" || gameOver) return;
+    const timer = window.setInterval(() => {
+      if (!startedAtRef.current) return;
+      setElapsedSec(Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000)));
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [screen, gameOver]);
+
   const press = (key: string, pressed: boolean) => {
     if (inputMode === "keyboard" || !engineRef.current) return;
     void soundRef.current.ensureReady();
@@ -130,22 +168,84 @@ export default function App() {
 
   const startGame = async (gameId: GameId) => {
     void soundRef.current.ensureReady();
+    // Clear any scripted level when starting normally from menu.
+    setCityRunnerActiveLevel(null);
+    setCampaignLevelIndex(null);
     setActiveGame(gameId);
     setScreen("game");
     setGameOver(false);
+    setLevelWon(false);
     setStatus("");
     setScore(0);
+    setElapsedSec(0);
+    startedAtRef.current = Date.now();
     try {
       await loadLeaderboard();
     } catch {
-      setStatus("Failed to load leaderboard.");
+      setStatus(t("leaderboard.loadFailed"));
+    }
+  };
+
+  const openLevelBuilder = () => {
+    engineRef.current?.stop();
+    setScreen("level-builder");
+  };
+
+  const openCampaign = () => {
+    engineRef.current?.stop();
+    setScreen("campaign");
+  };
+
+  const playCityRunnerLevel = async (level: import("../games/city-runner/levelStore").CityRunnerLevel) => {
+    void soundRef.current.ensureReady();
+    setCityRunnerActiveLevel(level);
+    setCampaignLevelIndex(null);
+    setActiveGame("city-runner");
+    setScreen("game");
+    setGameOver(false);
+    setLevelWon(false);
+    setLastPlayedTitle(level.title);
+    setStatus(``);
+    setScore(0);
+    setElapsedSec(0);
+    startedAtRef.current = Date.now();
+    try {
+      await loadLeaderboard();
+    } catch {
+      setStatus(t("leaderboard.loadFailed"));
+    }
+  };
+
+  const playCampaignLevel = async (levelIndex: number) => {
+    const unlocked = getUnlockedCityRunnerLevelCount();
+    if (levelIndex < 0 || levelIndex >= unlocked) return;
+    const level = cityRunnerCampaignLevels[levelIndex];
+    void soundRef.current.ensureReady();
+    setCityRunnerActiveLevel(level);
+    setCampaignLevelIndex(levelIndex);
+    setLastPlayedTitle(level.title);
+    setActiveGame("city-runner");
+    setScreen("game");
+    setGameOver(false);
+    setLevelWon(false);
+    setStatus("");
+    setScore(0);
+    setElapsedSec(0);
+    startedAtRef.current = Date.now();
+    try {
+      await loadLeaderboard();
+    } catch {
+      setStatus(t("leaderboard.loadFailed"));
     }
   };
 
   const restart = () => {
     void soundRef.current.ensureReady();
     setGameOver(false);
+    setLevelWon(false);
     setStatus("");
+    startedAtRef.current = Date.now();
+    setElapsedSec(0);
     engineRef.current?.reset();
     engineRef.current?.start();
   };
@@ -158,11 +258,11 @@ export default function App() {
   const submitScore = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name.trim()) {
-      setStatus("Enter your name.");
+      setStatus(t("leaderboard.enterName"));
       return;
     }
     if (!gameOver) {
-      setStatus("Finish the run first.");
+      setStatus(t("leaderboard.finishFirst"));
       return;
     }
     const payload = { playerName: name.trim(), score };
@@ -173,14 +273,14 @@ export default function App() {
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error("save failed");
-      setStatus("Score saved!");
+      setStatus(t("leaderboard.saved"));
       await loadLeaderboard();
       return;
     } catch {
       const next = sortScores([...readLocalScores(), payload]);
       writeLocalScores(next);
       setLeaderboard(next);
-      setStatus("Score saved locally (offline mode).");
+      setStatus(t("leaderboard.savedOffline"));
     }
   };
 
@@ -190,27 +290,111 @@ export default function App() {
   };
 
   if (screen === "menu") {
-    return <MenuScreen onStart={startGame} soundEnabled={soundEnabled} onToggleSound={toggleSound} />;
+    const content = (
+      <MenuScreen
+        onStart={startGame}
+        onOpenCampaign={openCampaign}
+        soundEnabled={soundEnabled}
+        onToggleSound={toggleSound}
+      />
+    );
+    return (
+      <div className="app-shell">
+        <header className="app-header">
+          <strong>Skyline Arcade</strong>
+          <LanguageSwitch />
+        </header>
+        {content}
+      </div>
+    );
   }
 
+  if (screen === "level-builder") {
+    return (
+      <div className="app-shell">
+        <header className="app-header">
+          <strong>Skyline Arcade</strong>
+          <LanguageSwitch />
+        </header>
+        <LevelBuilderScreen onBack={() => setScreen("menu")} onPlay={playCityRunnerLevel} />
+      </div>
+    );
+  }
+
+  if (screen === "campaign") {
+    return (
+      <div className="app-shell">
+        <header className="app-header">
+          <strong>Skyline Arcade</strong>
+          <LanguageSwitch />
+        </header>
+        <CampaignScreen onBack={() => setScreen("menu")} onPlayLevel={playCampaignLevel} />
+      </div>
+    );
+  }
+
+  if (screen === "level-result") {
+    const idx = campaignLevelIndex ?? -1;
+    const hasNext = idx >= 0 && idx + 1 < cityRunnerCampaignLevels.length;
+    return (
+      <div className="app-shell">
+        <header className="app-header">
+          <strong>Skyline Arcade</strong>
+          <LanguageSwitch />
+        </header>
+        <LevelResultScreen
+          won={lastWon}
+          title={lastPlayedTitle}
+          canGoNext={Boolean(lastWon && hasNext && idx + 1 < getUnlockedCityRunnerLevelCount())}
+          onRetry={() => {
+            if (campaignLevelIndex === null) {
+              setScreen("menu");
+              return;
+            }
+            void playCampaignLevel(campaignLevelIndex);
+          }}
+          onNext={() => {
+            if (!hasNext || campaignLevelIndex === null) return;
+            void playCampaignLevel(campaignLevelIndex + 1);
+          }}
+          onMenu={() => {
+            setCampaignLevelIndex(null);
+            setScreen("menu");
+          }}
+        />
+      </div>
+    );
+  }
+
+  const meters = Math.max(0, score);
   return (
-    <GameScreen
-      activeGame={activeGame}
-      score={score}
-      gameOver={gameOver}
-      soundEnabled={soundEnabled}
-      inputMode={inputMode}
-      canvasRef={canvasRef}
-      leaderboard={leaderboard}
-      name={name}
-      status={status}
-      onRestart={restart}
-      onToggleSound={toggleSound}
-      onExitToMenu={exitToMenu}
-      onInputModeChange={setInputMode}
-      onPressControl={press}
-      onNameChange={setName}
-      onSubmitScore={submitScore}
-    />
+    <div className="app-shell">
+      <header className="app-header">
+        <strong>Skyline Arcade</strong>
+        <LanguageSwitch />
+      </header>
+      <GameScreen
+        activeGame={activeGame}
+        score={score}
+        elapsedSec={elapsedSec}
+        meters={meters}
+        gameOver={gameOver}
+        levelWon={levelWon}
+        soundEnabled={soundEnabled}
+        inputMode={inputMode}
+        canvasRef={canvasRef}
+        leaderboard={leaderboard}
+        name={name}
+        status={status}
+        onRestart={restart}
+        onToggleSound={toggleSound}
+        onOpenLevelBuilder={openLevelBuilder}
+        onExitToMenu={exitToMenu}
+        onInputModeChange={setInputMode}
+        onPressControl={press}
+        onNameChange={setName}
+        onSubmitScore={submitScore}
+      />
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { ControlButton, InputMode } from "../../shared/types/game";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   inputMode: InputMode;
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export function ControlsPanel({ inputMode, onModeChange, onPress }: Props) {
+  const { t } = useTranslation();
   const controlButtons: ControlButton[] = useMemo(
     () => [
       { key: "ArrowLeft", label: "←" },
@@ -21,11 +23,11 @@ export function ControlsPanel({ inputMode, onModeChange, onPress }: Props) {
   return (
     <>
       <div className="control-mode">
-        <label htmlFor="controlMode">Controls</label>
+        <label htmlFor="controlMode">{t("controls.title")}</label>
         <select id="controlMode" value={inputMode} onChange={(e) => onModeChange(e.target.value as InputMode)}>
-          <option value="keyboard">Keyboard</option>
-          <option value="mobile">Mobile buttons</option>
-          <option value="dpad">D-pad</option>
+          <option value="keyboard">{t("controls.keyboard")}</option>
+          <option value="mobile">{t("controls.mobile")}</option>
+          <option value="dpad">{t("controls.dpad")}</option>
         </select>
       </div>
 

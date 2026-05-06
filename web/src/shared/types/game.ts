@@ -1,5 +1,5 @@
 export type InputMode = "keyboard" | "mobile" | "dpad";
-export type Screen = "menu" | "game";
+export type Screen = "menu" | "game" | "level-builder" | "campaign" | "level-result";
 export type GameId = "dodge-cubes" | "city-runner" | "car-ride" | "worms";
 
 export type LeaderboardEntry = {

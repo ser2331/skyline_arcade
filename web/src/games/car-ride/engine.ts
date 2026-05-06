@@ -83,7 +83,7 @@ export function createCarRideEngine(canvas: HTMLCanvasElement, callbacks: Engine
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#f8fafc";
       ctx.font = "bold 32px Arial";
-      ctx.fillText("Crashed!", 180, 240);
+      ctx.fillText("Авария!", 186, 240);
     }
   };
 

@@ -57,7 +57,7 @@ export function createDodgeCubesEngine(canvas: HTMLCanvasElement, callbacks: Eng
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#f8fafc";
       ctx.font = "bold 34px Arial";
-      ctx.fillText("Game Over", 155, 230);
+      ctx.fillText("Поражение", 165, 230);
     }
   };
 

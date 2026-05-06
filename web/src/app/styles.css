@@ -14,7 +14,25 @@ body {
 }
 
 .screen {
+    min-height: calc(100vh - 64px);
+}
+
+.app-shell {
     min-height: 100vh;
+}
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(2, 6, 23, 0.92);
+    border-bottom: 1px solid #334155;
+    backdrop-filter: blur(6px);
 }
 
 .menu-screen {
@@ -31,9 +49,177 @@ body {
     padding: 20px;
 }
 
+.builder-screen {
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.builder-card {
+    width: min(980px, 100%);
+    background: #111827;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.builder-topbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.builder-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 12px;
+}
+
+.builder-panel {
+    background: #0b1220;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.builder-label {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.builder-label span {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.builder-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.event-list {
+    display: grid;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.event-row {
+    display: grid;
+    grid-template-columns: 90px 140px repeat(3, 1fr) 110px;
+    min-width: 760px;
+    gap: 8px;
+    align-items: end;
+    padding: 10px;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    background: rgba(2, 6, 23, 0.35);
+}
+
+.event-cell {
+    display: grid;
+    gap: 4px;
+}
+
+.event-label {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.event-cell input,
+.event-cell select,
+.event-cell button {
+    width: 100%;
+}
+
+textarea {
+    width: 100%;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
 .game-grid {
     display: grid;
     gap: 10px;
+}
+
+.game-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.game-tile-btn {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    min-height: 130px;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid #475569;
+    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.35);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.game-tile-btn::before {
+    content: "";
+    position: absolute;
+    top: -120%;
+    left: -35%;
+    width: 45%;
+    height: 340%;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
+    transform: rotate(20deg);
+    transition: transform 420ms ease;
+    pointer-events: none;
+}
+
+.game-tile-icon {
+    font-size: 40px;
+    margin-bottom: 8px;
+}
+
+.game-tile-icon-img {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    transition: transform 180ms ease;
+}
+
+.game-tile-title {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .game-tile-btn:hover {
+        transform: translateY(-3px);
+        border-color: #60a5fa;
+        box-shadow: 0 14px 26px rgba(30, 64, 175, 0.28);
+        background: linear-gradient(145deg, #1f314a 0%, #13243a 100%);
+    }
+
+    .game-tile-btn:hover::before {
+        transform: translateX(230%) rotate(20deg);
+    }
+
+    .game-tile-btn:hover .game-tile-icon-img {
+        transform: scale(1.08);
+    }
+}
+
+.game-tile-btn:active {
+    transform: translateY(0) scale(0.98);
 }
 
 .game-card-btn {
@@ -62,6 +248,21 @@ body {
 .topbar-actions {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+}
+
+.metric-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.metric-pill {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #1e293b;
+    border: 1px solid #475569;
+    font-size: 14px;
 }
 
 .game-layout {
@@ -209,5 +410,50 @@ button:hover {
     .topbar-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
+    }
+
+    .metric-pills {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .game-cards-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .builder-topbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .builder-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .event-row {
+        grid-template-columns: 1fr 1fr;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 560px) {
+    .game-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .topbar-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .metric-pills {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .game-tile-btn,
+    .game-tile-btn::before,
+    .game-tile-icon-img {
+        transition: none;
     }
 }

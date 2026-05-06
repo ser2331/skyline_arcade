@@ -1,5 +1,6 @@
 import type { LeaderboardEntry } from "../../shared/types/game";
 import type { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   leaderboard: LeaderboardEntry[];
@@ -10,12 +11,13 @@ type Props = {
 };
 
 export function LeaderboardPanel({ leaderboard, name, status, onNameChange, onSubmit }: Props) {
+  const { t } = useTranslation();
   return (
     <section className="leaderboard-panel">
-      <h2>Leaderboard</h2>
+      <h2>{t("leaderboard.title")}</h2>
       <ol id="leaderboardList">
         {leaderboard.length === 0 ? (
-          <li>No scores yet</li>
+          <li>{t("leaderboard.empty")}</li>
         ) : (
           leaderboard.map((entry, idx) => (
             <li key={`${entry.playerName}-${entry.score}-${idx}`}>
@@ -25,16 +27,16 @@ export function LeaderboardPanel({ leaderboard, name, status, onNameChange, onSu
         )}
       </ol>
       <form className="score-form" onSubmit={onSubmit}>
-        <label htmlFor="playerName">Name</label>
+        <label htmlFor="playerName">{t("leaderboard.name")}</label>
         <input
           id="playerName"
           maxLength={20}
-          placeholder="Your name"
+          placeholder={t("leaderboard.namePlaceholder")}
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           required
         />
-        <button type="submit">Save score</button>
+        <button type="submit">{t("leaderboard.saveScore")}</button>
       </form>
       <p className="status-message">{status}</p>
     </section>
